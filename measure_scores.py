@@ -2,21 +2,23 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-from builtins import zip
-from builtins import str
+
 import codecs
-from argparse import ArgumentParser
-from tempfile import mkdtemp
+import csv
+import json
 import os
+import re
 import shutil
 import subprocess
-import re
 import sys
-import csv
+from argparse import ArgumentParser
+from builtins import str
+from builtins import zip
+from tempfile import mkdtemp
 
-from pycocotools.coco import COCO
-from pycocoevalcap.eval import COCOEvalCap
 from metrics.pymteval import BLEUScore, NISTScore
+from pycocoevalcap.eval import COCOEvalCap
+from pycocotools.coco import COCO
 
 # CSV headers
 HEADER_SRC = r'(mr|src|source|meaning(?:[_ .-]rep(?:resentation)?)?|da|dial(?:ogue)?[_ .-]act)s?'
@@ -109,7 +111,8 @@ def read_and_check_tsv(sys_file, src_file):
             if sys != ref]
     if errs:
         print("%s -- SRC fields not the same as reference" % sys_file)
-        raise ValueError('%s -- The SRC fields in SYS data are not the same as reference SRC on lines: %s' % (sys_file, str(errs)))
+        raise ValueError(
+            '%s -- The SRC fields in SYS data are not the same as reference SRC on lines: %s' % (sys_file, str(errs)))
 
     # return the checked data
     return src_data, sys_outs
@@ -221,13 +224,14 @@ def load_data(ref_file, sys_file, src_file=None):
             data_ref = [[inst] for inst in data_ref[0]]
 
     # sanity check
-    assert(len(data_ref) == len(data_sys) == len(data_src))
+    assert (len(data_ref) == len(data_sys) == len(data_src))
     return data_src, data_ref, data_sys
 
 
 def evaluate(data_src, data_ref, data_sys,
              print_as_table=False, print_table_header=False, sys_fname='',
-             python=False):
+             python=False,
+             train_dir=None):
     """Main procedure, running the MS-COCO & MTEval evaluators on the loaded data."""
 
     # run the MS-COCO evaluator
@@ -252,6 +256,12 @@ def evaluate(data_src, data_ref, data_sys,
         for metric in metric_names:
             print('%s: %.4f' % (metric, scores[metric]))
         print()
+
+    if train_dir is not None:
+        record_path = os.path.join(train_dir, "eval_generation_results.json")
+        os.makedirs(os.path.dirname(record_path), exist_ok=True)
+        with open(record_path, 'w') as f:
+            json.dump(scores, f, indent=4)
 
 
 def run_mteval(data_ref, data_sys, data_src):
@@ -358,23 +368,31 @@ if __name__ == '__main__':
                     type=str, help='Output segment-level scores in a TSV format to the given file?',
                     default=None)
     ap.add_argument('-s', '--src-file', type=str, help='Source file -- if given, system output ' +
-                    'should be a TSV with source & output columns, source is checked for integrity',
+                                                       'should be a TSV with source & output columns, '
+                                                       'source is checked for integrity',
                     default=None)
     ap.add_argument('-p', '--python', action='store_true',
                     help='Use Python implementation of MTEval instead of Perl?')
     ap.add_argument('-t', '--table', action='store_true', help='Print out results as a line in a'
-                    'TSV table?')
+                                                               'TSV table?')
     ap.add_argument('-H', '--header', action='store_true', help='Print TSV table header?')
     ap.add_argument('ref_file', type=str, help='References file -- multiple references separated ' +
-                    'by empty lines (or single-reference with no empty lines). Can also be a TSV ' +
-                    'file with source & reference columns. In that case, consecutive identical ' +
-                    'SRC columns are grouped as multiple references for the same source.')
+                                               'by empty lines (or single-reference with no empty lines). Can also be '
+                                               'a TSV ' +
+                                               'file with source & reference columns. In that case, consecutive '
+                                               'identical ' +
+                                               'SRC columns are grouped as multiple references for the same source.')
     ap.add_argument('sys_file', type=str, help='System output file to evaluate (text file with ' +
-                    'one output per line, or a TSV file with sources & corresponding outputs).')
+                                               'one output per line, or a TSV file with sources & corresponding '
+                                               'outputs).')
+    # My addition.
+    ap.add_argument('--train_dir', type=str, default=None,
+                    help="Write results to `eval_generation_results.json` in this directory.")
     args = ap.parse_args()
 
     data_src, data_ref, data_sys = load_data(args.ref_file, args.sys_file, args.src_file)
     if args.sent_level is not None:
         sent_level_scores(data_src, data_ref, data_sys, args.sent_level)
     else:
-        evaluate(data_src, data_ref, data_sys, args.table, args.header, args.sys_file, args.python)
+        evaluate(data_src, data_ref, data_sys, args.table, args.header, args.sys_file, args.python,
+                 args.train_dir, )
