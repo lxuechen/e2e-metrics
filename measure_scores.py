@@ -3,6 +3,9 @@
 
 from __future__ import print_function
 
+from argparse import ArgumentParser
+from builtins import str
+from builtins import zip
 import codecs
 import csv
 import json
@@ -11,9 +14,6 @@ import re
 import shutil
 import subprocess
 import sys
-from argparse import ArgumentParser
-from builtins import str
-from builtins import zip
 from tempfile import mkdtemp
 
 from metrics.pymteval import BLEUScore, NISTScore
@@ -231,7 +231,8 @@ def load_data(ref_file, sys_file, src_file=None):
 def evaluate(data_src, data_ref, data_sys,
              print_as_table=False, print_table_header=False, sys_fname='',
              python=False,
-             train_dir=None):
+             train_dir=None,
+             out_path=None):
     """Main procedure, running the MS-COCO & MTEval evaluators on the loaded data."""
 
     # run the MS-COCO evaluator
@@ -261,6 +262,11 @@ def evaluate(data_src, data_ref, data_sys,
         record_path = os.path.join(train_dir, "eval_generation_results.json")
         os.makedirs(os.path.dirname(record_path), exist_ok=True)
         with open(record_path, 'w') as f:
+            json.dump(scores, f, indent=4)
+        del record_path
+
+    if out_path is not None:
+        with open(out_path, 'w') as f:
             json.dump(scores, f, indent=4)
 
 
@@ -387,7 +393,9 @@ if __name__ == '__main__':
                                                'outputs).')
     # My addition.
     ap.add_argument('--train_dir', type=str, default=None,
-                    help="Write results to `eval_generation_results.json` in this directory.")
+                    help="Write results in json format to `eval_generation_results.json` in this directory.")
+    ap.add_argument('--out_path', type=str, default=None,
+                    help="Write results in json format to this path.")
     args = ap.parse_args()
 
     data_src, data_ref, data_sys = load_data(args.ref_file, args.sys_file, args.src_file)
@@ -395,4 +403,4 @@ if __name__ == '__main__':
         sent_level_scores(data_src, data_ref, data_sys, args.sent_level)
     else:
         evaluate(data_src, data_ref, data_sys, args.table, args.header, args.sys_file, args.python,
-                 args.train_dir, )
+                 args.train_dir, args.out_path)
