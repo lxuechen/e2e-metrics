@@ -224,7 +224,11 @@ def load_data(ref_file, sys_file, src_file=None):
             data_ref = [[inst] for inst in data_ref[0]]
 
     # sanity check
-    assert (len(data_ref) == len(data_sys) == len(data_src))
+    if not (len(data_ref) == len(data_sys) == len(data_src)):
+        print(f'data_ref size {len(data_ref)}')
+        print(f'data_sys size {len(data_sys)}')
+        print(f'data_src size {len(data_src)}')
+        raise ValueError("Files have different number of lines!!!")
     return data_src, data_ref, data_sys
 
 
