@@ -29,19 +29,26 @@ HEADER_REF = r'(trg|tgt|target|ref(?:erence)?|human(?:[_ .-](?:ref(?:erence)?))?
 def read_lines(file_name, multi_ref=False):
     """Read one instance per line from a text file. In multi-ref mode, assumes multiple lines
     (references) per instance & instances separated by empty lines."""
-    buf = [[]] if multi_ref else []
-    with codecs.open(file_name, 'rb', 'UTF-8') as fh:
-        for line in fh:
-            line = line.strip()
-            if multi_ref:
-                if not line:
-                    buf.append([])
+
+    if file_name.endswith('.json'):
+        # lxuechen: Deal with stupid parsing issues.
+        with open(file_name, 'r') as f:
+            buf = json.load(f)
+    else:
+        buf = [[]] if multi_ref else []
+        with codecs.open(file_name, 'rb', 'UTF-8') as fh:
+            for line in fh:
+                line = line.strip()
+                if multi_ref:
+                    if not line:
+                        buf.append([])
+                    else:
+                        buf[-1].append(line)
                 else:
-                    buf[-1].append(line)
-            else:
-                buf.append(line)
-    if multi_ref and not buf[-1]:
-        del buf[-1]
+                    buf.append(line)
+        if multi_ref:
+            while not buf[-1]:
+                del buf[-1]
     return buf
 
 
