@@ -245,17 +245,20 @@ def evaluate(data_src, data_ref, data_sys,
              train_dir=None,
              out_path=None):
     """Main procedure, running the MS-COCO & MTEval evaluators on the loaded data."""
+    scores = {}
 
-    # run the MS-COCO evaluator
-    coco_eval = run_coco_eval(data_ref, data_sys)
-    scores = {metric: score for metric, score in list(coco_eval.eval.items())}
+    if not args.skip_coco:
+        # run the MS-COCO evaluator
+        coco_eval = run_coco_eval(data_ref, data_sys)
+        scores.update({metric: score for metric, score in list(coco_eval.eval.items())})
 
-    # run MT-Eval (original or Python)
-    if python:
-        mteval_scores = run_pymteval(data_ref, data_sys)
-    else:
-        mteval_scores = run_mteval(data_ref, data_sys, data_src)
-    scores.update(mteval_scores)
+    if not args.skip_mteval:
+        # run MT-Eval (original or Python)
+        if python:
+            mteval_scores = run_pymteval(data_ref, data_sys)
+        else:
+            mteval_scores = run_mteval(data_ref, data_sys, data_src)
+        scores.update(mteval_scores)
 
     # print out the results
     metric_names = ['BLEU', 'NIST', 'METEOR', 'ROUGE_L', 'CIDEr']
@@ -266,6 +269,8 @@ def evaluate(data_src, data_ref, data_sys,
     else:
         print('SCORES:\n==============')
         for metric in metric_names:
+            if metric not in scores:
+                continue
             print('%s: %.4f' % (metric, scores[metric]))
         print()
 
@@ -379,6 +384,13 @@ def sent_level_scores(data_src, data_ref, data_sys, out_fname):
     write_tsv(out_fname, headers, res_data)
 
 
+def str2bool(v):
+    if isinstance(v, bool): return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'): return True
+    if v.lower() in ('no', 'false', 'f', 'n', '0'): return False
+    raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 if __name__ == '__main__':
     ap = ArgumentParser(description='E2E Challenge evaluation -- MS-COCO & MTEval wrapper')
     ap.add_argument('-l', '--sent-level', '--seg-level', '--sentence-level', '--segment-level',
@@ -407,6 +419,8 @@ if __name__ == '__main__':
                     help="Write results in json format to `eval_generation_results.json` in this directory.")
     ap.add_argument('--out_path', type=str, default=None,
                     help="Write results in json format to this path.")
+    ap.add_argument('--skip_coco', type=str2bool, default=False, const=True, nargs="?")
+    ap.add_argument('--skip_mteval', type=str2bool, default=False, const=True, nargs="?")
     args = ap.parse_args()
 
     data_src, data_ref, data_sys = load_data(args.ref_file, args.sys_file, args.src_file)
