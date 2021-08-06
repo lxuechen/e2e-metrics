@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 
+import argparse
 from argparse import ArgumentParser
 from builtins import str
 from builtins import zip
@@ -400,7 +401,7 @@ if __name__ == '__main__':
                                                        'should be a TSV with source & output columns, '
                                                        'source is checked for integrity',
                     default=None)
-    ap.add_argument('-p', '--python', action='store_true',
+    ap.add_argument('-p', '--python', type=str2bool, default=False, const=True, nargs="?",
                     help='Use Python implementation of MTEval instead of Perl?')
     ap.add_argument('-t', '--table', action='store_true', help='Print out results as a line in a'
                                                                'TSV table?')
