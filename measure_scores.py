@@ -27,7 +27,7 @@ HEADER_SYS = r'(out(?:put)?|ref(?:erence)?|sys(?:tem)?(?:[_ .-](?:out(?:put)?|re
 HEADER_REF = r'(trg|tgt|target|ref(?:erence)?|human(?:[_ .-](?:ref(?:erence)?))?)s?'
 
 
-def read_lines(file_name, multi_ref=False):
+def read_lines(file_name, multi_ref=False, encoding='UTF-8'):
     """Read one instance per line from a text file. In multi-ref mode, assumes multiple lines
     (references) per instance & instances separated by empty lines."""
 
@@ -37,8 +37,10 @@ def read_lines(file_name, multi_ref=False):
             buf = json.load(f)
     else:
         buf = [[]] if multi_ref else []
-        with codecs.open(file_name, 'rb', 'UTF-8') as fh:
-            for line in fh:
+        # lxuechen: codecs.open is deprecated since Python 2.6
+        with open(file_name, 'r', encoding=encoding) as fh:
+            lines = fh.readlines()
+            for line in lines:
                 line = line.strip()
                 if multi_ref:
                     if not line:
@@ -236,6 +238,9 @@ def load_data(ref_file, sys_file, src_file=None):
         print(f'data_ref size {len(data_ref)}')
         print(f'data_sys size {len(data_sys)}')
         print(f'data_src size {len(data_src)}')
+        print(f'ref_file: {ref_file}')
+        print(f'sys_file: {sys_file}')
+        print(f'src_file: {src_file}')
         raise ValueError("Files have different number of lines!!!")
     return data_src, data_ref, data_sys
 
